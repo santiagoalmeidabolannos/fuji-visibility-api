@@ -60,44 +60,29 @@ function parseCarousel($, carousel) {
   return days;
 }
 
-/**
- * Parse live camera YouTube IDs from the page.
- * @param {CheerioAPI} $
- * @returns {Array<{name: string, location: string, side: string, youtubeId: string}>}
- */
-function parseCameras($) {
-  const cameras = [];
-
-  // Camera entries are in <h3> + location <p> + Alpine.js x-data with youtubeId
-  $('[x-data]').each((_, el) => {
-    const xData = $(el).attr('x-data') || '';
-    const idMatch = xData.match(/youtubeId\s*:\s*['"]([^'"]+)['"]/);
-    if (!idMatch) return;
-
-    const youtubeId = idMatch[1];
-
-    // Channel ID (optional, for linking to channel live page)
-    const channelMatch = xData.match(/channelId\s*:\s*['"]([^'"]+)['"]/);
-    const channelId = channelMatch ? channelMatch[1] : null;
-
-    // Name and location come from the nearest preceding h3 + p
-    const container = $(el).closest('div');
-    const name = container.find('h3').first().text().trim() ||
-                 $(el).prevAll('h3').first().text().trim() || null;
-    const location = container.find('p').first().text().trim() || null;
-
-    // Determine side from name/location text
-    const text = (name + ' ' + location).toLowerCase();
-    const side = text.includes('south') || text.includes('hakone') || text.includes('shizuoka') || text.includes('enoshima') || text.includes('minobu') || text.includes('fujinomiya') || text.includes('susono')
-      ? 'south' : 'north';
-
-    if (youtubeId) {
-      cameras.push({ name, location, side, youtubeId, channelId });
-    }
-  });
-
-  return cameras;
-}
+// ── Curated camera list (sourced from isfujivisible.com) ─────────────────────
+// YouTube IDs are extracted from the page source; channel links used where available.
+// Order matches the site's camera picker order.
+const CAMERAS = [
+  // North
+  { name: 'Lake Kawaguchiko, Oishi Park', location: 'Kawaguchiko',              side: 'north', youtubeId: 'bdUbACCWmoY', channelId: '' },
+  { name: 'Fujikawaguchiko',              location: 'Fujikawaguchiko',           side: 'north', youtubeId: 'kYK9J6KNz0M', channelId: '' },
+  { name: 'Lake Yamanakako',              location: 'Yamanakako',                side: 'north', youtubeId: 'Gn2CJjzY068', channelId: '' },
+  { name: 'Chureito Pagoda',              location: 'Arakurayama Sengen Park',   side: 'north', youtubeId: '',             channelId: 'UCnqVpkMd8g9BvbePO-ZXTVA' },
+  { name: 'Lake Shoji',                   location: 'Lake Shoji',                side: 'north', youtubeId: 'so_3HK9HIdg', channelId: '' },
+  { name: 'Lake Motosu',                  location: 'Lake Motosu',               side: 'north', youtubeId: '_qdu714QT1E', channelId: '' },
+  { name: 'Oshino',                       location: 'Oshino',                    side: 'north', youtubeId: 'sm3xXTfDtGE', channelId: '' },
+  { name: 'Mt. Fuji Panoramic Ropeway',   location: 'Tenjoyama Park, Kawaguchiko', side: 'north', youtubeId: 'Sv9hcJ3k5h4', channelId: '' },
+  { name: 'FUJIYAMA Tower',               location: 'Fuji-Q Highland',           side: 'north', youtubeId: '_6nLps25Kws', channelId: '' },
+  // South
+  { name: 'Jukkoku Pass',                 location: 'Hakone',                    side: 'south', youtubeId: '4Hro9QIrsYA', channelId: '' },
+  { name: 'Lake Ashinoko',                location: 'Hakone',                    side: 'south', youtubeId: 'maMMEh-2Bsk', channelId: '' },
+  { name: 'Hiroshige Mt. Fuji',           location: 'Shizuoka City',             side: 'south', youtubeId: 'GsD9QQEKSzQ', channelId: '' },
+  { name: 'Shonan Enoshima',              location: 'Shichirigahama, Kamakura',  side: 'south', youtubeId: '_ddxDN0eMnA', channelId: '' },
+  { name: 'Shichimensan, Minobu',         location: 'Minobu',                    side: 'west',  youtubeId: '54NpKx_efis', channelId: '' },
+  { name: 'Fujinomiya',                   location: 'Fujinomiya',                side: 'south', youtubeId: 'tDw-LV_EKJM', channelId: '' },
+  { name: 'Grinpa, 2nd Station',          location: 'Susono',                    side: 'south', youtubeId: 'Joer2U0vki4', channelId: '' },
+];
 
 /**
  * Scrape Mt. Fuji visibility data from isfujivisible.com.
@@ -140,12 +125,10 @@ async function scrape() {
     };
   });
 
-  const cameras = parseCameras($);
-
   return {
     updatedAt: new Date().toISOString(),
     forecast,
-    cameras,
+    cameras: CAMERAS,
   };
 }
 
