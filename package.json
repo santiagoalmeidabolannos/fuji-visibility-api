@@ -1,0 +1,16 @@
+{
+  "name": "fuji-visibility-api",
+  "version": "1.0.0",
+  "description": "REST API that exposes Mt. Fuji visibility forecast data scraped from isfujivisible.com",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "node --watch src/app.js"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "fastify": "^5.3.3",
+    "node-cron": "^3.0.3",
+    "undici": "^7.5.0"
+  }
+}
