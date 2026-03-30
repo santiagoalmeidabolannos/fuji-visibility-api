@@ -7,10 +7,23 @@ const cache = require('./cache');
 
 const app = Fastify({ logger: true });
 
+// Polling guidance returned to clients
+const POLL_META = {
+  scrapeIntervalMinutes: 60,
+  sourceUpdatesDaily: true,
+  recommendedPollingIntervalMinutes: 60,
+  note: 'The source (isfujivisible.com) updates once per day. Polling more often than once per hour is unnecessary.',
+};
+
 // ── Routes ────────────────────────────────────────────────────────────────────
 
 app.get('/health', async (_req, reply) => {
-  return reply.send({ status: 'ok', lastUpdated: cache.lastUpdated() });
+  return reply.send({
+    status: 'ok',
+    lastScraped: cache.lastUpdated(),
+    lastChanged: cache.lastChanged(),
+    polling: POLL_META,
+  });
 });
 
 app.get('/visibility', async (_req, reply) => {
@@ -18,17 +31,31 @@ app.get('/visibility', async (_req, reply) => {
   if (!data) {
     return reply.code(503).send({ error: 'Data not yet available. Please try again shortly.' });
   }
-  return reply.send(data);
+
+  // Recommend clients cache for 1 hour
+  reply.header('Cache-Control', 'public, max-age=3600');
+
+  return reply.send({
+    meta: {
+      lastScraped: cache.lastUpdated(),
+      lastChanged: cache.lastChanged(),
+      ...POLL_META,
+    },
+    forecast: data.forecast,
+  });
 });
 
-// ── Cron: re-scrape every day at 06:00 JST (21:00 UTC previous day) ──────────
-// JST = UTC+9, so 06:00 JST = 21:00 UTC
-cron.schedule('0 21 * * *', async () => {
-  app.log.info('cron: starting scheduled scrape');
+// ── Cron: re-scrape every hour ────────────────────────────────────────────────
+cron.schedule('0 * * * *', async () => {
+  app.log.info('cron: starting hourly scrape');
   try {
     const data = await scrape();
-    cache.set(data);
-    app.log.info('cron: scrape complete, %d forecast days cached', data.forecast.length);
+    const changed = cache.set(data);
+    app.log.info(
+      { changed },
+      'cron: scrape complete — data %s',
+      changed ? 'UPDATED' : 'unchanged'
+    );
   } catch (err) {
     app.log.error({ err }, 'cron: scrape failed');
   }
