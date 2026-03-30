@@ -6,7 +6,7 @@ const { scrape } = require('./scraper');
 const cache = require('./cache');
 
 const app = Fastify({ logger: true });
-await app.register(require('@fastify/cors'), { origin: true });
+app.register(require('@fastify/cors'), { origin: true });
 
 // Polling guidance returned to clients
 const POLL_META = {
