@@ -27,6 +27,18 @@ app.get('/health', async (_req, reply) => {
   });
 });
 
+app.get('/cameras', async (_req, reply) => {
+  const data = cache.get();
+  if (!data) {
+    return reply.code(503).send({ error: 'Data not yet available. Please try again shortly.' });
+  }
+  reply.header('Cache-Control', 'public, max-age=3600');
+  return reply.send({
+    meta: { lastScraped: cache.lastUpdated() },
+    cameras: data.cameras ?? [],
+  });
+});
+
 app.get('/visibility', async (_req, reply) => {
   const data = cache.get();
   if (!data) {

@@ -61,6 +61,45 @@ function parseCarousel($, carousel) {
 }
 
 /**
+ * Parse live camera YouTube IDs from the page.
+ * @param {CheerioAPI} $
+ * @returns {Array<{name: string, location: string, side: string, youtubeId: string}>}
+ */
+function parseCameras($) {
+  const cameras = [];
+
+  // Camera entries are in <h3> + location <p> + Alpine.js x-data with youtubeId
+  $('[x-data]').each((_, el) => {
+    const xData = $(el).attr('x-data') || '';
+    const idMatch = xData.match(/youtubeId\s*:\s*['"]([^'"]+)['"]/);
+    if (!idMatch) return;
+
+    const youtubeId = idMatch[1];
+
+    // Channel ID (optional, for linking to channel live page)
+    const channelMatch = xData.match(/channelId\s*:\s*['"]([^'"]+)['"]/);
+    const channelId = channelMatch ? channelMatch[1] : null;
+
+    // Name and location come from the nearest preceding h3 + p
+    const container = $(el).closest('div');
+    const name = container.find('h3').first().text().trim() ||
+                 $(el).prevAll('h3').first().text().trim() || null;
+    const location = container.find('p').first().text().trim() || null;
+
+    // Determine side from name/location text
+    const text = (name + ' ' + location).toLowerCase();
+    const side = text.includes('south') || text.includes('hakone') || text.includes('shizuoka') || text.includes('enoshima') || text.includes('minobu') || text.includes('fujinomiya') || text.includes('susono')
+      ? 'south' : 'north';
+
+    if (youtubeId) {
+      cameras.push({ name, location, side, youtubeId, channelId });
+    }
+  });
+
+  return cameras;
+}
+
+/**
  * Scrape Mt. Fuji visibility data from isfujivisible.com.
  * @returns {Promise<object>}
  */
@@ -101,9 +140,12 @@ async function scrape() {
     };
   });
 
+  const cameras = parseCameras($);
+
   return {
     updatedAt: new Date().toISOString(),
     forecast,
+    cameras,
   };
 }
 
